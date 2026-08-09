@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>넘버 퓨전 : 스테이지 로그라이크</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-1:#12162B;
+    --bg-2:#241934;
+    --panel:#1b2036;
+    --panel-2:#232a49;
+    --panel-border:#343a5c;
+    --accent:#5EEAD4;      /* + 연산 색 */
+    --accent-2:#FBBF24;    /* 강조/점수 색 */
+    --accent-mul:#F472B6;  /* × 연산 색 */
+    --text:#EAEAF4;
+    --text-dim:#9296B4;
+    --danger:#F87171;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background: radial-gradient(circle at 20% 6%, var(--bg-2), var(--bg-1) 62%);
+    font-family:'Space Grotesk', sans-serif;
+    color:var(--text);
+    overflow:hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select:none;
+  }
+  #app{ position:relative; width:100vw; height:100vh; display:flex; flex-direction:column; }
+
+  /* ---------- HUD ---------- */
+  #hud{ padding:12px 16px 4px; z-index:20; }
+  .hud-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; }
+  .hud-block{ background:rgba(27,32,54,.75); border:1px solid var(--panel-border); border-radius:12px; padding:6px 14px; backdrop-filter: blur(6px); }
+  .hud-label{ font-size:10px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase; }
+  .hud-value{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:19px; }
+  .op-badge{
+    width:64px;height:64px;border-radius:18px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:32px;
+    border:2px solid var(--accent); color:var(--accent);
+    box-shadow:0 0 0 3px rgba(94,234,212,.15);
+    transition: border-color .2s, color .2s, box-shadow .2s;
+  }
+  .op-badge.mul{ border-color:var(--accent-mul); color:var(--accent-mul); box-shadow:0 0 0 3px rgba(244,114,182,.15); }
+  .op-badge-group{ display:flex; align-items:center; gap:6px; }
+  .op-badge-next{
+    width:30px;height:30px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;
+    border:2px solid var(--accent); color:var(--accent);
+    opacity:.55;
+  }
+  .op-badge-next.mul{ border-color:var(--accent-mul); color:var(--accent-mul); }
+
+  .bar-track{ width:100%; height:8px; border-radius:999px; background:rgba(255,255,255,.08); overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:999px; transition:width .25s ease; }
+  #target-fill{ background:linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .bar-label{ display:flex; justify-content:center; font-size:11px; color:var(--text-dim); margin:3px 2px 0; font-family:'JetBrains Mono',monospace; }
+  #remaining-label{
+    text-align:center; font-size:28px; font-weight:700; color:var(--accent-2);
+    font-family:'JetBrains Mono',monospace; margin-bottom:6px; line-height:1.1;
+  }
+
+  /* ---------- Board ---------- */
+  #board-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:8px 12px; }
+  #clicks-display{ text-align:center; }
+  .clicks-label{ font-size:11px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase; margin-bottom:2px; }
+  .clicks-number{
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:44px; line-height:1;
+    color:var(--accent-2); transition:color .2s;
+  }
+  .clicks-number.warn{ color:var(--danger); }
+  #board{
+    display:grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap:6px;
+    width:min(96vw, 520px);
+    aspect-ratio:1/1;
+  }
+  .cell{
+    display:flex;align-items:center;justify-content:center;
+    border-radius:10px;
+    background:var(--panel-2);
+    border:1px solid rgba(255,255,255,.05);
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:clamp(13px, 4.2vw, 19px);
+    color:var(--text);
+    cursor:pointer;
+    transition: background .08s ease, box-shadow .08s ease, transform .08s ease;
+  }
+  .cell.shape-add{
+    background:rgba(94,234,212,.30);
+    box-shadow:inset 0 0 0 2px rgba(94,234,212,.85);
+  }
+  .cell.shape-mul{
+    background:rgba(244,114,182,.30);
+    box-shadow:inset 0 0 0 2px rgba(244,114,182,.85);
+  }
+  .cell.neg{ color:var(--danger); }
+  .cell.zero{ color:var(--text-dim); font-style:italic; }
+  #board.cooldown{ opacity:.88; }
+  .cell.flash{ animation: cellFlash .32s ease; }
+  @keyframes cellFlash{
+    0%{ transform:scale(1.18); }
+    100%{ transform:scale(1); }
+  }
+  .cell.refill{ animation: cellRefill .22s ease; }
+  @keyframes cellRefill{
+    from{ opacity:0; transform:scale(.4); }
+    to{ opacity:1; transform:scale(1); }
+  }
+  .result-float{
+    position:absolute;
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;font-size:14px;
+    color:var(--accent-2);
+    pointer-events:none;
+    animation:floatUp .9s ease forwards;
+    white-space:nowrap;
+    text-shadow:0 2px 8px rgba(0,0,0,.6);
+    z-index:15;
+  }
+  @keyframes floatUp{
+    from{ transform:translateY(0); opacity:1;}
+    to{ transform:translateY(-42px); opacity:0;}
+  }
+
+  /* ---------- Overlays ---------- */
+  .overlay{
+    position:absolute;inset:0;
+    background:rgba(10,12,24,.76);
+    backdrop-filter:blur(3px);
+    display:flex;align-items:center;justify-content:center;
+    z-index:50;
+    opacity:0;pointer-events:none;
+    transition:opacity .2s;
+  }
+  .overlay.show{ opacity:1;pointer-events:auto; }
+  .modal-title{ text-align:center;font-size:13px;color:var(--text-dim); letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px; }
+  .modal-sub{ text-align:center;font-size:12px;color:var(--text-dim); margin-top:-8px; margin-bottom:16px; }
+
+  #perk-cards{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; max-width:640px; padding:0 14px; }
+  .perk-card{
+    width:158px; background:var(--panel); border:1px solid var(--panel-border);
+    border-radius:16px; padding:15px; cursor:pointer;
+    transition: transform .15s, border-color .15s, box-shadow .15s;
+  }
+  .perk-card:hover{ transform:translateY(-6px); border-color:var(--accent-2); box-shadow:0 10px 24px rgba(251,191,36,.18); }
+  .perk-icon{ font-size:24px; margin-bottom:8px; }
+  .perk-name{ font-weight:700; font-size:14.5px; margin-bottom:5px; }
+  .perk-desc{ font-size:12px; color:var(--text-dim); line-height:1.4; }
+
+  #panel{
+    background:var(--panel); border:1px solid var(--panel-border);
+    border-radius:22px; padding:34px 38px; text-align:center; max-width:320px;
+  }
+  #panel h1{ font-size:21px; margin:0 0 10px; }
+  #panel p{ color:var(--text-dim); font-size:13px; line-height:1.65; margin-bottom:20px; }
+  #panel .big-score{ font-family:'JetBrains Mono',monospace; font-size:38px; font-weight:700; color:var(--accent-2); margin:6px 0 2px; }
+  #panel .sub-line{ color:var(--text-dim); font-size:12.5px; margin-bottom:18px; }
+  .primary-btn{
+    padding:12px 28px; border:none; border-radius:999px;
+    background:var(--accent-2); color:#1b1400; font-weight:700;
+    font-size:14.5px; cursor:pointer;
+  }
+
+  #ad-slot{ text-align:center; padding:6px; font-size:11px; color:var(--text-dim); z-index:20; }
+
+  /* ---------- Perk list FAB ---------- */
+  #perk-fab{
+    position:fixed; right:16px; bottom:56px; z-index:22;
+    width:52px;height:52px;border-radius:16px;
+    background:var(--panel); border:1px solid var(--panel-border);
+    color:var(--accent-2); font-size:22px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.35);
+  }
+  #perk-fab .fab-badge{
+    position:absolute; top:-6px; right:-6px;
+    min-width:20px; height:20px; padding:0 5px;
+    border-radius:999px; background:var(--accent-2); color:#1b1400;
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:11px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  #perk-fab .fab-badge.hidden{ display:none; }
+  #perk-list-cards{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; max-width:640px; padding:0 14px; max-height:60vh; overflow-y:auto; }
+  .perk-list-empty{ text-align:center; color:var(--text-dim); font-size:13px; padding:20px; }
+  .perk-count-badge{
+    display:inline-block; margin-left:6px; font-size:11px; color:var(--accent-2);
+    font-family:'JetBrains Mono',monospace;
+  }
+  #perk-list-close{
+    display:block; margin:18px auto 0; padding:9px 24px; border-radius:999px;
+    background:var(--panel-2); border:1px solid var(--panel-border); color:var(--text);
+    font-size:13px; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="hud">
+    <div id="remaining-label">목표까지 100점</div>
+    <div class="bar-track"><div class="bar-fill" id="target-fill" style="width:0%"></div></div>
+    <div class="bar-label">
+      <span id="target-frac-label">0 / 100</span>
+    </div>
+    <div class="hud-row" style="margin-top:8px;">
+      <div class="hud-block">
+        <div class="hud-label">스테이지</div>
+        <div class="hud-value" id="stage-val">1</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">총점</div>
+        <div class="hud-value" id="total-val">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="board-wrap">
+    <div id="clicks-display">
+      <div class="clicks-label">남은 클릭</div>
+      <div class="clicks-number" id="clicks-number">3</div>
+    </div>
+    <div id="board"></div>
+    <div class="op-badge-group">
+      <div class="op-badge" id="op-badge">+</div>
+      <div class="op-badge-next" id="op-badge-next" title="다음 기호">×</div>
+    </div>
+  </div>
+
+  <div class="overlay show" id="start-overlay">
+    <div id="panel">
+      <h1>넘버 퓨전</h1>
+      <p>기호(+ 는 십자가, × 는 3×3 사각형)가 마우스를 따라다녀요.<br>
+      원하는 칸 위에서 클릭하면 그 범위의 숫자들이 연산으로 병합돼요.<br>
+      스테이지마다 제한된 클릭 횟수 안에 목표 점수를 넘기면 클리어! 퍽을 골라 더 강해지세요.</p>
+      <button class="primary-btn" id="start-btn">시작하기</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="perk-overlay">
+    <div>
+      <div class="modal-title">스테이지 <span id="cleared-stage-num"></span> 클리어!</div>
+      <div class="modal-sub">퍽을 하나 선택하세요</div>
+      <div id="perk-cards"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="end-overlay">
+    <div id="panel">
+      <div class="hud-label">게임 오버</div>
+      <div class="big-score" id="final-score">0</div>
+      <div class="sub-line" id="end-sub">스테이지 1에서 종료 · 최고 기록 0</div>
+      <button class="primary-btn" id="retry-btn">다시하기</button>
+    </div>
+  </div>
+
+  <button id="perk-fab" title="보유 퍽 확인">
+    🃏
+    <span class="fab-badge hidden" id="fab-badge">0</span>
+  </button>
+
+  <div class="overlay" id="perk-list-overlay">
+    <div>
+      <div class="modal-title">보유 퍽</div>
+      <div id="perk-list-cards"></div>
+      <button id="perk-list-close">닫기</button>
+    </div>
+  </div>
+
+  <div id="ad-slot">
+    <!-- Google AdSense 슬롯: 배포 시 이 위치에 <ins class="adsbygoogle">...</ins> 코드를 넣으세요 -->
+    광고 영역
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const COLS = 6, ROWS = 6;
+  const BEST_KEY = 'number_fusion_v2_best_score';
+
+  const boardEl = document.getElementById('board');
+  const stageValEl = document.getElementById('stage-val');
+  const totalValEl = document.getElementById('total-val');
+  const opBadgeEl = document.getElementById('op-badge');
+  const opBadgeNextEl = document.getElementById('op-badge-next');
+  const targetFillEl = document.getElementById('target-fill');
+  const clicksNumberEl = document.getElementById('clicks-number');
+  const remainingLabelEl = document.getElementById('remaining-label');
+  const targetFracLabelEl = document.getElementById('target-frac-label');
+
+  const startOverlay = document.getElementById('start-overlay');
+  const perkOverlay = document.getElementById('perk-overlay');
+  const endOverlay = document.getElementById('end-overlay');
+  const perkCardsEl = document.getElementById('perk-cards');
+  const clearedStageNumEl = document.getElementById('cleared-stage-num');
+  const finalScoreEl = document.getElementById('final-score');
+  const endSubEl = document.getElementById('end-sub');
+  const perkFabEl = document.getElementById('perk-fab');
+  const fabBadgeEl = document.getElementById('fab-badge');
+  const perkListOverlay = document.getElementById('perk-list-overlay');
+  const perkListCardsEl = document.getElementById('perk-list-cards');
+
+  // ---------- Shapes (row/col offsets from anchor) ----------
+  const SHAPES = {
+    '+': [[0,0],[-1,0],[1,0],[0,-1],[0,1]],
+    '×': [[0,0],[-1,-1],[-1,1],[1,-1],[1,1]]  // 넘버패드 1,3,5,7,9 자리 (대각선 X자)
+  };
+  const RADIUS = 1; // both shapes fit within a 1-cell margin from anchor
+
+  // ---------- Perks ----------
+  const PERK_POOL = [
+    { id:'addBoost', icon:'➕', name:'덧셈 강화', desc:'덧셈 점수 +35%',
+      apply(st){ st.mult.add *= 1.35; } },
+    { id:'mulBoost', icon:'✖️', name:'곱셈 강화', desc:'곱셈 점수 +35%',
+      apply(st){ st.mult.mul *= 1.35; } },
+    { id:'extraClicks', icon:'🔁', name:'추가 병합', desc:'스테이지 클릭 수 +1',
+      apply(st){ st.bonusClicks += 1; } },
+    { id:'combo', icon:'⚡', name:'콤보 마스터리', desc:'4초 내 연속 병합 시 +25점',
+      apply(st){ st.comboBonusActive = true; } },
+    { id:'easier', icon:'🎯', name:'가벼운 목표', desc:'다음 스테이지부터 목표 점수 -15%',
+      apply(st){ st.targetScale *= 0.85; } },
+    { id:'bigDigits', icon:'🔷', name:'큰 숫자 등장', desc:'3~4 숫자가 더 자주 등장',
+      apply(st){ st.bigDigitsLevel += 1; } },
+    { id:'headStart', icon:'🚀', name:'헤드 스타트', desc:'스테이지 시작 시 +40점 보너스',
+      apply(st){ st.headStartLevel += 1; } },
+  ];
+
+  // ---------- Game state ----------
+  let state = null;
+  let cells = []; // 2D [row][col] -> {row,col,value,el}
+  let running = false;
+  let previewCells = [];
+  let currentOp = '+';
+  let nextOp = '+';
+
+  function freshState(){
+    return {
+      stage: 1,
+      totalScore: 0,
+      stageScore: 0,
+      mult: { add:1, mul:1 },
+      bonusClicks: 0,
+      comboBonusActive: false,
+      targetScale: 1,
+      bigDigitsLevel: 0,
+      headStartLevel: 0,
+      lastMergeAt: 0,
+      cooldownUntil: 0,
+      clicksLeft: 0,
+      clicksTotal: 0,
+      acquiredPerks: {}, // { perkId: count }
+    };
+  }
+
+  function fmt(n){ return Math.round(n).toLocaleString('ko-KR'); }
+  function rand(min,max){ return Math.random()*(max-min)+min; }
+  function randInt(min,max){ return Math.floor(rand(min,max+1)); }
+
+  function targetForStage(stage){
+    return Math.round(60 * Math.pow(1.4, stage-1) * state.targetScale);
+  }
+  function clicksForStage(){
+    return 3 + state.bonusClicks;
+  }
+
+  // 값 범위: -2 ~ 4로 축소해서 암산 부담을 줄임. 음수/0은 여전히 희귀한 리스크 요소.
+  const VALUE_RANGE = [-2,-1,0,1,2,3,4];
+  function weightedDigit(){
+    const weights = VALUE_RANGE.map(v => {
+      if(v < 0) return 0.55;
+      if(v === 0) return 0.35;
+      if(v >= 3) return 1 + state.bigDigitsLevel;
+      return 1;
+    });
+    const total = weights.reduce((a,b)=>a+b,0);
+    let r = Math.random()*total;
+    for(let i=0;i<weights.length;i++){
+      if(r < weights[i]) return VALUE_RANGE[i];
+      r -= weights[i];
+    }
+    return VALUE_RANGE[VALUE_RANGE.length-1];
+  }
+
+  // ---------- Board ----------
+  function buildBoard(){
+    boardEl.innerHTML = '';
+    cells = [];
+    for(let r=0;r<ROWS;r++){
+      const rowArr = [];
+      for(let c=0;c<COLS;c++){
+        const el = document.createElement('div');
+        el.className = 'cell';
+        const value = weightedDigit();
+        el.textContent = value;
+        el.classList.toggle('neg', value < 0);
+        el.classList.toggle('zero', value === 0);
+        el.dataset.row = r;
+        el.dataset.col = c;
+        boardEl.appendChild(el);
+        rowArr.push({ row:r, col:c, value, el });
+      }
+      cells.push(rowArr);
+    }
+  }
+
+  function clampAnchor(row, col){
+    row = Math.max(RADIUS, Math.min(ROWS-1-RADIUS, row));
+    col = Math.max(RADIUS, Math.min(COLS-1-RADIUS, col));
+    return { row, col };
+  }
+
+  function shapeCellsAt(anchorRow, anchorCol, op){
+    const { row, col } = clampAnchor(anchorRow, anchorCol);
+    return SHAPES[op].map(([dr,dc]) => cells[row+dr][col+dc]);
+  }
+
+  function getCellFromEvent(e){
+    const target = e.target.closest ? e.target.closest('.cell') : null;
+    if(!target) return null;
+    return { row: Number(target.dataset.row), col: Number(target.dataset.col) };
+  }
+
+  function clearPreview(){
+    for(const c of previewCells) c.el.classList.remove('shape-add','shape-mul');
+    previewCells = [];
+  }
+
+  function showPreview(anchorRow, anchorCol){
+    clearPreview();
+    const targets = shapeCellsAt(anchorRow, anchorCol, currentOp);
+    const cls = currentOp === '+' ? 'shape-add' : 'shape-mul';
+    for(const c of targets) c.el.classList.add(cls);
+    previewCells = targets;
+  }
+
+  function floatText(xPct, yPct, text){
+    const wrap = document.getElementById('board-wrap');
+    const rect = boardEl.getBoundingClientRect();
+    const parentRect = wrap.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'result-float';
+    el.textContent = text;
+    el.style.left = (rect.left - parentRect.left + rect.width*xPct) + 'px';
+    el.style.top = (rect.top - parentRect.top + rect.height*yPct) + 'px';
+    wrap.style.position = 'relative';
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+
+  function randomOp(){
+    return Math.random() < 0.6 ? '+' : '×';
+  }
+
+  function renderOperatorBadges(){
+    opBadgeEl.textContent = currentOp;
+    opBadgeEl.classList.toggle('mul', currentOp === '×');
+    opBadgeNextEl.textContent = nextOp;
+    opBadgeNextEl.classList.toggle('mul', nextOp === '×');
+  }
+
+  function initOperatorQueue(){
+    currentOp = randomOp();
+    nextOp = randomOp();
+    renderOperatorBadges();
+  }
+
+  function advanceOperatorQueue(){
+    currentOp = nextOp;
+    nextOp = randomOp();
+    renderOperatorBadges();
+  }
+
+  const COOLDOWN_MS = 300;
+
+  function doMerge(anchorRow, anchorCol){
+    if(!running) return;
+    const now = performance.now();
+    if(now < state.cooldownUntil) return; // 연타 방지 쿨타임
+
+    const targets = shapeCellsAt(anchorRow, anchorCol, currentOp);
+    let gained;
+    let exprParts = targets.map(c => c.value);
+    if(currentOp === '+'){
+      const sum = exprParts.reduce((a,b)=>a+b,0);
+      gained = Math.round(sum * state.mult.add);
+    } else {
+      const product = exprParts.reduce((a,b)=>a*b,1);
+      // 밸런스 패치: 곱셈이 지수적으로 폭발하지 않도록 로그 스케일로 압축.
+      // 부호는 유지, 0이 섞이면 병합 무효(0점).
+      if(product === 0){
+        gained = 0;
+      } else {
+        const sign = Math.sign(product);
+        gained = Math.round(sign * Math.log2(Math.abs(product) + 1) * 7 * state.mult.mul);
+      }
+    }
+
+    let comboText = '';
+    if(state.comboBonusActive && now - state.lastMergeAt < 4000 && state.lastMergeAt > 0){
+      gained += 25;
+      comboText = ' 콤보+25';
+    }
+    state.lastMergeAt = now;
+    state.cooldownUntil = now + COOLDOWN_MS;
+    boardEl.classList.add('cooldown');
+    setTimeout(() => boardEl.classList.remove('cooldown'), COOLDOWN_MS);
+
+    state.stageScore = Math.max(0, state.stageScore + gained);
+    state.totalScore = Math.max(0, state.totalScore + gained);
+
+    // visual feedback
+    const avgRow = targets.reduce((a,c)=>a+c.row,0)/targets.length;
+    const avgCol = targets.reduce((a,c)=>a+c.col,0)/targets.length;
+    const sign = gained >= 0 ? '+' : '';
+    floatText((avgCol+0.5)/COLS, (avgRow+0.5)/ROWS, `${sign}${fmt(gained)}${comboText}`);
+
+    for(const c of targets){
+      c.el.classList.remove('shape-add','shape-mul');
+      c.el.classList.add('flash');
+      setTimeout(() => c.el.classList.remove('flash'), 320);
+    }
+    setTimeout(() => {
+      for(const c of targets){
+        c.value = weightedDigit();
+        c.el.textContent = c.value;
+        c.el.classList.toggle('neg', c.value < 0);
+        c.el.classList.toggle('zero', c.value === 0);
+        c.el.classList.add('refill');
+        setTimeout(() => c.el.classList.remove('refill'), 230);
+      }
+    }, 90);
+
+    previewCells = [];
+    advanceOperatorQueue();
+    state.clicksLeft -= 1;
+    updateHud();
+
+    if(state.stageScore >= targetForStage(state.stage)){
+      stageClear();
+    } else if(state.clicksLeft <= 0){
+      gameOver();
+    }
+  }
+
+  // ---------- HUD ----------
+  function updateHud(){
+    stageValEl.textContent = state.stage;
+    totalValEl.textContent = fmt(state.totalScore);
+    const target = targetForStage(state.stage);
+    const remaining = Math.max(0, target - state.stageScore);
+    remainingLabelEl.textContent = remaining > 0 ? `목표까지 ${fmt(remaining)}점` : '목표 달성!';
+    targetFracLabelEl.textContent = `${fmt(state.stageScore)} / ${fmt(target)}`;
+    targetFillEl.style.width = Math.min(100, (state.stageScore/target)*100) + '%';
+    clicksNumberEl.textContent = Math.max(0, state.clicksLeft);
+    clicksNumberEl.classList.toggle('warn', state.clicksLeft <= 1);
+  }
+
+  function updatePerkFab(){
+    const total = Object.values(state.acquiredPerks).reduce((a,b) => a+b, 0);
+    fabBadgeEl.textContent = total;
+    fabBadgeEl.classList.toggle('hidden', total === 0);
+  }
+
+  function renderPerkList(){
+    perkListCardsEl.innerHTML = '';
+    const ids = Object.keys(state.acquiredPerks).filter(id => state.acquiredPerks[id] > 0);
+    if(ids.length === 0){
+      perkListCardsEl.innerHTML = '<div class="perk-list-empty">아직 보유한 퍽이 없어요.</div>';
+      return;
+    }
+    for(const id of ids){
+      const def = PERK_POOL.find(p => p.id === id);
+      if(!def) continue;
+      const count = state.acquiredPerks[id];
+      const card = document.createElement('div');
+      card.className = 'perk-card';
+      card.innerHTML = `<div class="perk-icon">${def.icon}</div>
+        <div class="perk-name">${def.name}${count > 1 ? `<span class="perk-count-badge">×${count}</span>` : ''}</div>
+        <div class="perk-desc">${def.desc}</div>`;
+      perkListCardsEl.appendChild(card);
+    }
+  }
+
+  // ---------- Stage flow ----------
+  function startStage(){
+    state.stageScore = 0;
+    if(state.headStartLevel > 0){
+      state.stageScore += 40 * state.headStartLevel;
+      state.totalScore += 40 * state.headStartLevel;
+    }
+    state.clicksTotal = clicksForStage();
+    state.clicksLeft = state.clicksTotal;
+    buildBoard();
+    initOperatorQueue();
+    updateHud();
+    running = true;
+  }
+
+  function stageClear(){
+    running = false;
+    clearPreview();
+    clearedStageNumEl.textContent = state.stage;
+    perkCardsEl.innerHTML = '';
+    const pool = [...PERK_POOL];
+    const picks = [];
+    while(picks.length < 3 && pool.length){
+      const i = randInt(0, pool.length-1);
+      picks.push(pool.splice(i,1)[0]);
+    }
+    for(const p of picks){
+      const card = document.createElement('div');
+      card.className = 'perk-card';
+      card.innerHTML = `<div class="perk-icon">${p.icon}</div>
+        <div class="perk-name">${p.name}</div>
+        <div class="perk-desc">${p.desc}</div>`;
+      card.addEventListener('click', () => {
+        p.apply(state);
+        state.acquiredPerks[p.id] = (state.acquiredPerks[p.id] || 0) + 1;
+        updatePerkFab();
+        state.stage += 1;
+        perkOverlay.classList.remove('show');
+        startStage();
+      });
+      perkCardsEl.appendChild(card);
+    }
+    perkOverlay.classList.add('show');
+  }
+
+  function gameOver(){
+    running = false;
+    clearPreview();
+    const best = Math.max(state.totalScore, Number(localStorage.getItem(BEST_KEY) || 0));
+    localStorage.setItem(BEST_KEY, String(best));
+    finalScoreEl.textContent = fmt(state.totalScore);
+    endSubEl.textContent = `스테이지 ${state.stage}에서 종료 · 최고 기록 ${fmt(best)}`;
+    endOverlay.classList.add('show');
+  }
+
+  function startRun(){
+    state = freshState();
+    updatePerkFab();
+    startOverlay.classList.remove('show');
+    endOverlay.classList.remove('show');
+    startStage();
+  }
+
+  // ---------- Input ----------
+  boardEl.addEventListener('mousemove', (e) => {
+    if(!running) return;
+    const hit = getCellFromEvent(e);
+    if(!hit) return;
+    showPreview(hit.row, hit.col);
+  });
+  boardEl.addEventListener('mouseleave', clearPreview);
+  boardEl.addEventListener('click', (e) => {
+    if(!running) return;
+    const hit = getCellFromEvent(e);
+    if(!hit) return;
+    doMerge(hit.row, hit.col);
+  });
+
+  document.getElementById('start-btn').addEventListener('click', startRun);
+  document.getElementById('retry-btn').addEventListener('click', startRun);
+  perkFabEl.addEventListener('click', () => {
+    renderPerkList();
+    perkListOverlay.classList.add('show');
+  });
+  document.getElementById('perk-list-close').addEventListener('click', () => {
+    perkListOverlay.classList.remove('show');
+  });
+
+  // initial board preview behind start overlay
+  state = freshState();
+  buildBoard();
+  initOperatorQueue();
+  updatePerkFab();
+
+})();
+</script>
+</body>
+</html>
