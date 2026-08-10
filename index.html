@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>넘버 퓨전 : 스테이지 로그라이크</title>
+<title>Number Fusion : Stage Roguelike</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
@@ -33,7 +33,14 @@
   #app{ position:relative; width:100vw; height:100vh; display:flex; flex-direction:column; }
 
   /* ---------- HUD ---------- */
-  #hud{ padding:12px 16px 4px; z-index:20; }
+  #hud{ position:relative; padding:12px 16px 4px; z-index:20; }
+  .remaining-delta-float{
+    position:absolute; left:50%; top:32px; transform:translateX(-50%);
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:16px;
+    pointer-events:none; animation:floatUp .9s ease forwards;
+    color:var(--accent); z-index:25;
+  }
+  .remaining-delta-float.bad{ color:var(--danger); }
   .hud-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; }
   .hud-block{ background:rgba(27,32,54,.75); border:1px solid var(--panel-border); border-radius:12px; padding:6px 14px; backdrop-filter: blur(6px); }
   .hud-label{ font-size:10px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase; }
@@ -67,11 +74,12 @@
   }
 
   /* ---------- Board ---------- */
-  #board-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:8px 12px; }
+  #board-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:8px 12px; }
+  .op-row{ display:flex; align-items:center; gap:18px; }
   #clicks-display{ text-align:center; }
-  .clicks-label{ font-size:11px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase; margin-bottom:2px; }
+  .clicks-label{ font-size:10px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase; margin-bottom:2px; }
   .clicks-number{
-    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:44px; line-height:1;
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:30px; line-height:1;
     color:var(--accent-2); transition:color .2s;
   }
   .clicks-number.warn{ color:var(--danger); }
@@ -175,13 +183,28 @@
 
   /* ---------- Perk list FAB ---------- */
   #perk-fab{
-    position:fixed; right:16px; bottom:56px; z-index:22;
+    position:fixed; right:16px; bottom:118px; z-index:22;
     width:52px;height:52px;border-radius:16px;
     background:var(--panel); border:1px solid var(--panel-border);
     color:var(--accent-2); font-size:22px;
     display:flex;align-items:center;justify-content:center;
     cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.35);
   }
+  #settings-fab{
+    position:fixed; right:16px; bottom:56px; z-index:22;
+    width:52px;height:52px;border-radius:16px;
+    background:var(--panel); border:1px solid var(--panel-border);
+    color:var(--text-dim); font-size:22px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.35);
+  }
+  #lang-toggle-row{ display:flex; gap:12px; justify-content:center; margin-bottom:18px; }
+  .lang-btn{
+    padding:10px 22px; border-radius:999px; border:2px solid var(--panel-border);
+    background:var(--panel-2); color:var(--text); font-size:13px; cursor:pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .lang-btn.active{ border-color:var(--accent-2); color:var(--accent-2); }
   #perk-fab .fab-badge{
     position:absolute; top:-6px; right:-6px;
     min-width:20px; height:20px; padding:0 5px;
@@ -207,78 +230,93 @@
 <div id="app">
 
   <div id="hud">
-    <div id="remaining-label">목표까지 100점</div>
+    <div id="remaining-label">100</div>
     <div class="bar-track"><div class="bar-fill" id="target-fill" style="width:0%"></div></div>
     <div class="bar-label">
       <span id="target-frac-label">0 / 100</span>
     </div>
     <div class="hud-row" style="margin-top:8px;">
       <div class="hud-block">
-        <div class="hud-label">스테이지</div>
+        <div class="hud-label" id="stage-label-text">STAGE</div>
         <div class="hud-value" id="stage-val">1</div>
       </div>
       <div class="hud-block">
-        <div class="hud-label">총점</div>
+        <div class="hud-label" id="total-label-text">TOTAL</div>
         <div class="hud-value" id="total-val">0</div>
       </div>
     </div>
   </div>
 
   <div id="board-wrap">
-    <div id="clicks-display">
-      <div class="clicks-label">남은 클릭</div>
-      <div class="clicks-number" id="clicks-number">3</div>
-    </div>
     <div id="board"></div>
-    <div class="op-badge-group">
-      <div class="op-badge" id="op-badge">+</div>
-      <div class="op-badge-next" id="op-badge-next" title="다음 기호">×</div>
+    <div class="op-row">
+      <div id="clicks-display">
+        <div class="clicks-label" id="clicks-label-text">CLICKS</div>
+        <div class="clicks-number" id="clicks-number">3</div>
+      </div>
+      <div class="op-badge-group">
+        <div class="op-badge" id="op-badge">+</div>
+        <div class="op-badge-next" id="op-badge-next">×</div>
+      </div>
     </div>
   </div>
 
   <div class="overlay show" id="start-overlay">
     <div id="panel">
-      <h1>넘버 퓨전</h1>
-      <p>기호(+ 는 십자가, × 는 3×3 사각형)가 마우스를 따라다녀요.<br>
-      원하는 칸 위에서 클릭하면 그 범위의 숫자들이 연산으로 병합돼요.<br>
-      스테이지마다 제한된 클릭 횟수 안에 목표 점수를 넘기면 클리어! 퍽을 골라 더 강해지세요.</p>
-      <button class="primary-btn" id="start-btn">시작하기</button>
+      <h1 id="start-title">Number Fusion</h1>
+      <p id="start-instructions">A symbol (+ is a cross, × is a diagonal X) follows your mouse.<br>
+      Click on the cells you want to merge them with that operation.<br>
+      Beat the target score within your limited clicks per stage to clear it! Pick perks to grow stronger.</p>
+      <button class="primary-btn" id="start-btn">START</button>
     </div>
   </div>
 
   <div class="overlay" id="perk-overlay">
     <div>
-      <div class="modal-title">스테이지 <span id="cleared-stage-num"></span> 클리어!</div>
-      <div class="modal-sub">퍽을 하나 선택하세요</div>
+      <div class="modal-title" id="perk-overlay-title">Stage <span id="cleared-stage-num"></span> Cleared!</div>
+      <div class="modal-sub" id="perk-overlay-sub">Choose a perk</div>
       <div id="perk-cards"></div>
     </div>
   </div>
 
   <div class="overlay" id="end-overlay">
     <div id="panel">
-      <div class="hud-label">게임 오버</div>
+      <div class="hud-label" id="gameover-label">GAME OVER</div>
       <div class="big-score" id="final-score">0</div>
-      <div class="sub-line" id="end-sub">스테이지 1에서 종료 · 최고 기록 0</div>
-      <button class="primary-btn" id="retry-btn">다시하기</button>
+      <div class="sub-line" id="end-sub">Ended at stage 1 · Best 0</div>
+      <button class="primary-btn" id="retry-btn">RETRY</button>
     </div>
   </div>
 
-  <button id="perk-fab" title="보유 퍽 확인">
+  <button id="perk-fab">
     🃏
     <span class="fab-badge hidden" id="fab-badge">0</span>
   </button>
 
+  <button id="settings-fab">⚙️</button>
+
   <div class="overlay" id="perk-list-overlay">
     <div>
-      <div class="modal-title">보유 퍽</div>
+      <div class="modal-title" id="perk-list-title">Your Perks</div>
       <div id="perk-list-cards"></div>
-      <button id="perk-list-close">닫기</button>
+      <button id="perk-list-close">Close</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="settings-overlay">
+    <div>
+      <div class="modal-title" id="settings-title">Settings</div>
+      <div id="lang-toggle-row">
+        <button class="lang-btn" id="lang-btn-en" data-lang="en">English</button>
+        <button class="lang-btn" id="lang-btn-ko" data-lang="ko">한국어</button>
+      </div>
+      <button id="settings-close">Close</button>
     </div>
   </div>
 
   <div id="ad-slot">
-    <!-- Google AdSense 슬롯: 배포 시 이 위치에 <ins class="adsbygoogle">...</ins> 코드를 넣으세요 -->
-    광고 영역
+    <!-- Google AdSense slot: insert your <ins class="adsbygoogle">...</ins> code here when deployed -->
+    <span id="ad-slot-text">Ad Space</span>
   </div>
 
 </div>
@@ -304,15 +342,73 @@
   const perkOverlay = document.getElementById('perk-overlay');
   const endOverlay = document.getElementById('end-overlay');
   const perkCardsEl = document.getElementById('perk-cards');
-  const clearedStageNumEl = document.getElementById('cleared-stage-num');
   const finalScoreEl = document.getElementById('final-score');
   const endSubEl = document.getElementById('end-sub');
   const perkFabEl = document.getElementById('perk-fab');
   const fabBadgeEl = document.getElementById('fab-badge');
   const perkListOverlay = document.getElementById('perk-list-overlay');
   const perkListCardsEl = document.getElementById('perk-list-cards');
+  const settingsFabEl = document.getElementById('settings-fab');
+  const settingsOverlay = document.getElementById('settings-overlay');
+  const langBtnEn = document.getElementById('lang-btn-en');
+  const langBtnKo = document.getElementById('lang-btn-ko');
 
-  // ---------- Shapes (row/col offsets from anchor) ----------
+  // ---------- Localization ----------
+  const LANG_KEY = 'number_fusion_v2_lang';
+  let lang = localStorage.getItem(LANG_KEY) || 'en';
+
+  const STRINGS = {
+    en: {
+      title: 'Number Fusion',
+      instructions: 'A symbol (+ is a cross, × is a diagonal X) follows your mouse.<br>Click on the cells you want to merge them with that operation.<br>Beat the target score within your limited clicks per stage to clear it! Pick perks to grow stronger.',
+      start: 'START',
+      stage: 'STAGE',
+      total: 'TOTAL',
+      clicks: 'CLICKS',
+      nextSymbolTitle: 'Next symbol',
+      stageWord: 'Stage',
+      clearedWord: 'Cleared!',
+      choosePerk: 'Choose a perk',
+      gameOver: 'GAME OVER',
+      retry: 'RETRY',
+      endedAt: (stage, best) => `Ended at stage ${stage} · Best ${best}`,
+      viewPerksTitle: 'View your perks',
+      yourPerks: 'Your Perks',
+      noPerks: 'No perks acquired yet.',
+      close: 'Close',
+      adSpace: 'Ad Space',
+      comboSuffix: ' Combo+25',
+      settingsTitle: 'Settings',
+      settingsTitleAttr: 'Settings',
+    },
+    ko: {
+      title: '넘버 퓨전',
+      instructions: '기호(+ 는 십자가, × 는 대각선 X자)가 마우스를 따라다녀요.<br>원하는 칸 위에서 클릭하면 그 범위의 숫자들이 연산으로 병합돼요.<br>스테이지마다 제한된 클릭 횟수 안에 목표 점수를 넘기면 클리어! 퍽을 골라 더 강해지세요.',
+      start: '시작하기',
+      stage: '스테이지',
+      total: '총점',
+      clicks: '남은 클릭',
+      nextSymbolTitle: '다음 기호',
+      stageWord: '스테이지',
+      clearedWord: '클리어!',
+      choosePerk: '퍽을 하나 선택하세요',
+      gameOver: '게임 오버',
+      retry: '다시하기',
+      endedAt: (stage, best) => `스테이지 ${stage}에서 종료 · 최고 기록 ${best}`,
+      viewPerksTitle: '보유 퍽 확인',
+      yourPerks: '보유 퍽',
+      noPerks: '아직 보유한 퍽이 없어요.',
+      close: '닫기',
+      adSpace: '광고 영역',
+      comboSuffix: ' 콤보+25',
+      settingsTitle: '설정',
+      settingsTitleAttr: '설정',
+    },
+  };
+
+  function t(key){ return STRINGS[lang][key]; }
+
+
   const SHAPES = {
     '+': [[0,0],[-1,0],[1,0],[0,-1],[0,1]],
     '×': [[0,0],[-1,-1],[-1,1],[1,-1],[1,1]]  // 넘버패드 1,3,5,7,9 자리 (대각선 X자)
@@ -321,20 +417,42 @@
 
   // ---------- Perks ----------
   const PERK_POOL = [
-    { id:'addBoost', icon:'➕', name:'덧셈 강화', desc:'덧셈 점수 +35%',
+    { id:'addBoost', icon:'➕',
+      name:{ en:'Addition Boost', ko:'덧셈 강화' },
+      desc:{ en:'+35% addition score', ko:'덧셈 점수 +35%' },
       apply(st){ st.mult.add *= 1.35; } },
-    { id:'mulBoost', icon:'✖️', name:'곱셈 강화', desc:'곱셈 점수 +35%',
+    { id:'mulBoost', icon:'✖️',
+      name:{ en:'Multiplication Boost', ko:'곱셈 강화' },
+      desc:{ en:'+35% multiplication score', ko:'곱셈 점수 +35%' },
       apply(st){ st.mult.mul *= 1.35; } },
-    { id:'extraClicks', icon:'🔁', name:'추가 병합', desc:'스테이지 클릭 수 +1',
+    { id:'extraClicks', icon:'🔁',
+      name:{ en:'Extra Merge', ko:'추가 병합' },
+      desc:{ en:'+1 click per stage', ko:'스테이지 클릭 수 +1' },
       apply(st){ st.bonusClicks += 1; } },
-    { id:'combo', icon:'⚡', name:'콤보 마스터리', desc:'4초 내 연속 병합 시 +25점',
+    { id:'combo', icon:'⚡',
+      name:{ en:'Combo Mastery', ko:'콤보 마스터리' },
+      desc:{ en:'+25 points for merging within 4s', ko:'4초 내 연속 병합 시 +25점' },
       apply(st){ st.comboBonusActive = true; } },
-    { id:'easier', icon:'🎯', name:'가벼운 목표', desc:'다음 스테이지부터 목표 점수 -15%',
+    { id:'easier', icon:'🎯',
+      name:{ en:'Lighter Target', ko:'가벼운 목표' },
+      desc:{ en:'-15% target score from next stage', ko:'다음 스테이지부터 목표 점수 -15%' },
       apply(st){ st.targetScale *= 0.85; } },
-    { id:'bigDigits', icon:'🔷', name:'큰 숫자 등장', desc:'3~4 숫자가 더 자주 등장',
+    { id:'bigDigits', icon:'🔷',
+      name:{ en:'Big Numbers', ko:'큰 숫자 등장' },
+      desc:{ en:'3-4 appear more often', ko:'3~4 숫자가 더 자주 등장' },
       apply(st){ st.bigDigitsLevel += 1; } },
-    { id:'headStart', icon:'🚀', name:'헤드 스타트', desc:'스테이지 시작 시 +40점 보너스',
+    { id:'headStart', icon:'🚀',
+      name:{ en:'Head Start', ko:'헤드 스타트' },
+      desc:{ en:'+40 bonus points at stage start', ko:'스테이지 시작 시 +40점 보너스' },
       apply(st){ st.headStartLevel += 1; } },
+    { id:'maxValueUp', icon:'📈',
+      name:{ en:'Higher Ceiling', ko:'숫자 최대치 증가' },
+      desc:{ en:'+1 to the highest number that can appear', ko:'보드에 나올 수 있는 최대 숫자 +1' },
+      apply(st){ st.maxValueBonus += 1; } },
+    { id:'extraGuaranteedMul', icon:'🎲',
+      name:{ en:'Multiply Insurance', ko:'곱셈 확정 횟수 증가' },
+      desc:{ en:'Guaranteed × per stage +1 (e.g. 1→2)', ko:'스테이지당 확정 × 횟수 +1 (예: 1→2)' },
+      apply(st){ st.guaranteedMulBonus += 1; } },
   ];
 
   // ---------- Game state ----------
@@ -360,6 +478,10 @@
       cooldownUntil: 0,
       clicksLeft: 0,
       clicksTotal: 0,
+      maxValueBonus: 0,
+      guaranteedMulBonus: 0,
+      opSequence: [],
+      opIndex: 0,
       acquiredPerks: {}, // { perkId: count }
     };
   }
@@ -369,28 +491,36 @@
   function randInt(min,max){ return Math.floor(rand(min,max+1)); }
 
   function targetForStage(stage){
-    return Math.round(60 * Math.pow(1.4, stage-1) * state.targetScale);
+    const raw = 50 * Math.pow(1.35, stage-1) * state.targetScale;
+    return Math.max(50, Math.round(raw / 50) * 50);
   }
   function clicksForStage(){
     return 3 + state.bonusClicks;
   }
 
-  // 값 범위: -2 ~ 4로 축소해서 암산 부담을 줄임. 음수/0은 여전히 희귀한 리스크 요소.
-  const VALUE_RANGE = [-2,-1,0,1,2,3,4];
+  // 값 범위: 기본 -2 ~ 4. 퍽으로 상한을 늘릴 수 있음. 음수/0은 여전히 희귀한 리스크 요소.
+  function getValueRange(){
+    const max = 4 + state.maxValueBonus;
+    const range = [];
+    for(let v = -2; v <= max; v++) range.push(v);
+    return range;
+  }
   function weightedDigit(){
-    const weights = VALUE_RANGE.map(v => {
-      if(v < 0) return 0.55;
+    const range = getValueRange();
+    const max = range[range.length - 1];
+    const weights = range.map(v => {
+      if(v < 0) return 0.3;
       if(v === 0) return 0.35;
-      if(v >= 3) return 1 + state.bigDigitsLevel;
+      if(v >= max - 1) return 1 + state.bigDigitsLevel;
       return 1;
     });
     const total = weights.reduce((a,b)=>a+b,0);
     let r = Math.random()*total;
     for(let i=0;i<weights.length;i++){
-      if(r < weights[i]) return VALUE_RANGE[i];
+      if(r < weights[i]) return range[i];
       r -= weights[i];
     }
-    return VALUE_RANGE[VALUE_RANGE.length-1];
+    return range[range.length-1];
   }
 
   // ---------- Board ----------
@@ -463,6 +593,30 @@
     return Math.random() < 0.6 ? '+' : '×';
   }
 
+  function guaranteedMulForStage(){
+    return 1 + state.guaranteedMulBonus;
+  }
+
+  // 스테이지에 쓸 연산자 시퀀스를 미리 만들어서 × 최소 등장 횟수를 보장함.
+  function buildOpSequence(length, guaranteedMul){
+    const seq = [];
+    for(let i=0;i<length;i++) seq.push(randomOp());
+    const mulCount = seq.filter(o => o === '×').length;
+    if(mulCount < guaranteedMul){
+      const needed = guaranteedMul - mulCount;
+      const plusIndices = [];
+      for(let i=0;i<seq.length;i++) if(seq[i] !== '×') plusIndices.push(i);
+      for(let i=plusIndices.length-1;i>0;i--){
+        const j = randInt(0,i);
+        [plusIndices[i],plusIndices[j]] = [plusIndices[j],plusIndices[i]];
+      }
+      for(let k=0;k<needed && k<plusIndices.length;k++){
+        seq[plusIndices[k]] = '×';
+      }
+    }
+    return seq;
+  }
+
   function renderOperatorBadges(){
     opBadgeEl.textContent = currentOp;
     opBadgeEl.classList.toggle('mul', currentOp === '×');
@@ -471,14 +625,17 @@
   }
 
   function initOperatorQueue(){
-    currentOp = randomOp();
-    nextOp = randomOp();
+    state.opSequence = buildOpSequence(Math.max(state.clicksTotal, 1), guaranteedMulForStage());
+    state.opIndex = 0;
+    currentOp = state.opSequence[0] ?? randomOp();
+    nextOp = state.opSequence[1] ?? randomOp();
     renderOperatorBadges();
   }
 
   function advanceOperatorQueue(){
-    currentOp = nextOp;
-    nextOp = randomOp();
+    state.opIndex += 1;
+    currentOp = state.opSequence[state.opIndex] ?? randomOp();
+    nextOp = state.opSequence[state.opIndex+1] ?? randomOp();
     renderOperatorBadges();
   }
 
@@ -510,7 +667,7 @@
     let comboText = '';
     if(state.comboBonusActive && now - state.lastMergeAt < 4000 && state.lastMergeAt > 0){
       gained += 25;
-      comboText = ' 콤보+25';
+      comboText = t('comboSuffix');
     }
     state.lastMergeAt = now;
     state.cooldownUntil = now + COOLDOWN_MS;
@@ -545,6 +702,7 @@
     previewCells = [];
     advanceOperatorQueue();
     state.clicksLeft -= 1;
+    showRemainingDelta(gained);
     updateHud();
 
     if(state.stageScore >= targetForStage(state.stage)){
@@ -560,11 +718,21 @@
     totalValEl.textContent = fmt(state.totalScore);
     const target = targetForStage(state.stage);
     const remaining = Math.max(0, target - state.stageScore);
-    remainingLabelEl.textContent = remaining > 0 ? `목표까지 ${fmt(remaining)}점` : '목표 달성!';
+    remainingLabelEl.textContent = fmt(remaining);
     targetFracLabelEl.textContent = `${fmt(state.stageScore)} / ${fmt(target)}`;
     targetFillEl.style.width = Math.min(100, (state.stageScore/target)*100) + '%';
     clicksNumberEl.textContent = Math.max(0, state.clicksLeft);
     clicksNumberEl.classList.toggle('warn', state.clicksLeft <= 1);
+  }
+
+  function showRemainingDelta(gained){
+    if(gained === 0) return;
+    const text = gained > 0 ? `-${fmt(gained)}` : `+${fmt(Math.abs(gained))}`;
+    const el = document.createElement('div');
+    el.className = 'remaining-delta-float' + (gained > 0 ? '' : ' bad');
+    el.textContent = text;
+    document.getElementById('hud').appendChild(el);
+    setTimeout(() => el.remove(), 900);
   }
 
   function updatePerkFab(){
@@ -577,7 +745,7 @@
     perkListCardsEl.innerHTML = '';
     const ids = Object.keys(state.acquiredPerks).filter(id => state.acquiredPerks[id] > 0);
     if(ids.length === 0){
-      perkListCardsEl.innerHTML = '<div class="perk-list-empty">아직 보유한 퍽이 없어요.</div>';
+      perkListCardsEl.innerHTML = `<div class="perk-list-empty">${t('noPerks')}</div>`;
       return;
     }
     for(const id of ids){
@@ -587,8 +755,8 @@
       const card = document.createElement('div');
       card.className = 'perk-card';
       card.innerHTML = `<div class="perk-icon">${def.icon}</div>
-        <div class="perk-name">${def.name}${count > 1 ? `<span class="perk-count-badge">×${count}</span>` : ''}</div>
-        <div class="perk-desc">${def.desc}</div>`;
+        <div class="perk-name">${def.name[lang]}${count > 1 ? `<span class="perk-count-badge">×${count}</span>` : ''}</div>
+        <div class="perk-desc">${def.desc[lang]}</div>`;
       perkListCardsEl.appendChild(card);
     }
   }
@@ -611,7 +779,9 @@
   function stageClear(){
     running = false;
     clearPreview();
-    clearedStageNumEl.textContent = state.stage;
+    document.getElementById('perk-overlay-title').innerHTML =
+      `${t('stageWord')} <span id="cleared-stage-num">${state.stage}</span> ${t('clearedWord')}`;
+    document.getElementById('perk-overlay-sub').textContent = t('choosePerk');
     perkCardsEl.innerHTML = '';
     const pool = [...PERK_POOL];
     const picks = [];
@@ -623,8 +793,8 @@
       const card = document.createElement('div');
       card.className = 'perk-card';
       card.innerHTML = `<div class="perk-icon">${p.icon}</div>
-        <div class="perk-name">${p.name}</div>
-        <div class="perk-desc">${p.desc}</div>`;
+        <div class="perk-name">${p.name[lang]}</div>
+        <div class="perk-desc">${p.desc[lang]}</div>`;
       card.addEventListener('click', () => {
         p.apply(state);
         state.acquiredPerks[p.id] = (state.acquiredPerks[p.id] || 0) + 1;
@@ -644,7 +814,7 @@
     const best = Math.max(state.totalScore, Number(localStorage.getItem(BEST_KEY) || 0));
     localStorage.setItem(BEST_KEY, String(best));
     finalScoreEl.textContent = fmt(state.totalScore);
-    endSubEl.textContent = `스테이지 ${state.stage}에서 종료 · 최고 기록 ${fmt(best)}`;
+    endSubEl.textContent = t('endedAt')(state.stage, fmt(best));
     endOverlay.classList.add('show');
   }
 
@@ -671,6 +841,35 @@
     doMerge(hit.row, hit.col);
   });
 
+  function applyStaticText(){
+    document.getElementById('start-title').textContent = t('title');
+    document.getElementById('start-instructions').innerHTML = t('instructions');
+    document.getElementById('start-btn').textContent = t('start');
+    document.getElementById('stage-label-text').textContent = t('stage');
+    document.getElementById('total-label-text').textContent = t('total');
+    document.getElementById('clicks-label-text').textContent = t('clicks');
+    opBadgeNextEl.title = t('nextSymbolTitle');
+    document.getElementById('perk-overlay-sub').textContent = t('choosePerk');
+    document.getElementById('gameover-label').textContent = t('gameOver');
+    document.getElementById('retry-btn').textContent = t('retry');
+    perkFabEl.title = t('viewPerksTitle');
+    document.getElementById('perk-list-title').textContent = t('yourPerks');
+    document.getElementById('perk-list-close').textContent = t('close');
+    document.getElementById('ad-slot-text').textContent = t('adSpace');
+    document.getElementById('settings-title').textContent = t('settingsTitle');
+    document.getElementById('settings-close').textContent = t('close');
+    settingsFabEl.title = t('settingsTitleAttr');
+    langBtnEn.classList.toggle('active', lang === 'en');
+    langBtnKo.classList.toggle('active', lang === 'ko');
+  }
+
+  function setLanguage(newLang){
+    lang = newLang;
+    localStorage.setItem(LANG_KEY, lang);
+    applyStaticText();
+    if(state) updateHud();
+  }
+
   document.getElementById('start-btn').addEventListener('click', startRun);
   document.getElementById('retry-btn').addEventListener('click', startRun);
   perkFabEl.addEventListener('click', () => {
@@ -680,12 +879,21 @@
   document.getElementById('perk-list-close').addEventListener('click', () => {
     perkListOverlay.classList.remove('show');
   });
+  settingsFabEl.addEventListener('click', () => {
+    settingsOverlay.classList.add('show');
+  });
+  document.getElementById('settings-close').addEventListener('click', () => {
+    settingsOverlay.classList.remove('show');
+  });
+  langBtnEn.addEventListener('click', () => setLanguage('en'));
+  langBtnKo.addEventListener('click', () => setLanguage('ko'));
 
   // initial board preview behind start overlay
   state = freshState();
   buildBoard();
   initOperatorQueue();
   updatePerkFab();
+  applyStaticText();
 
 })();
 </script>
