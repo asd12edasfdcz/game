@@ -32,6 +32,13 @@
   }
   #app{ position:relative; width:100vw; height:100vh; display:flex; flex-direction:column; }
 
+  /* ---------- Low-spec mode: strip every animation/transition/blur ---------- */
+  body.low-spec *, body.low-spec *::before, body.low-spec *::after{
+    animation: none !important;
+    transition: none !important;
+    backdrop-filter: none !important;
+  }
+
   /* ---------- HUD ---------- */
   #hud{ position:relative; padding:12px 16px 4px; z-index:20; }
   .remaining-delta-float{
@@ -165,14 +172,16 @@
   .perk-name{ font-weight:700; font-size:14.5px; margin-bottom:5px; }
   .perk-desc{ font-size:12px; color:var(--text-dim); line-height:1.4; }
 
-  #panel{
+  .panel{
     background:var(--panel); border:1px solid var(--panel-border);
     border-radius:22px; padding:34px 38px; text-align:center; max-width:320px;
   }
-  #panel h1{ font-size:21px; margin:0 0 10px; }
-  #panel p{ color:var(--text-dim); font-size:13px; line-height:1.65; margin-bottom:20px; }
-  #panel .big-score{ font-family:'JetBrains Mono',monospace; font-size:38px; font-weight:700; color:var(--accent-2); margin:6px 0 2px; }
-  #panel .sub-line{ color:var(--text-dim); font-size:12.5px; margin-bottom:18px; }
+  .panel h1{ font-size:21px; margin:0 0 10px; }
+  .panel p{ color:var(--text-dim); font-size:13px; line-height:1.65; margin-bottom:20px; word-break:keep-all; overflow-wrap:normal; }
+  .panel .big-score{ font-family:'JetBrains Mono',monospace; font-size:38px; font-weight:700; color:var(--accent-2); margin:6px 0 2px; }
+  .panel .sub-line{ color:var(--text-dim); font-size:12.5px; margin-bottom:18px; }
+  .panel.panel-wide{ max-width:520px; padding:36px 40px; }
+  .panel.panel-wide p{ font-size:14.5px; line-height:1.75; }
   .primary-btn{
     padding:12px 28px; border:none; border-radius:999px;
     background:var(--accent-2); color:#1b1400; font-weight:700;
@@ -180,6 +189,52 @@
   }
 
   #ad-slot{ text-align:center; padding:6px; font-size:11px; color:var(--text-dim); z-index:20; }
+
+  /* ---------- Tutorial ---------- */
+  #tutorial-panel{
+    position:fixed; left:50%; bottom:14px; z-index:40;
+    width:min(92vw, 460px);
+    background:var(--panel); border:1px solid var(--accent-2);
+    border-radius:18px; padding:14px 16px;
+    display:flex; align-items:center; gap:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+    opacity:0; pointer-events:none;
+    transform:translateX(-50%) translateY(20px);
+    transition:opacity .25s, transform .25s;
+  }
+  #tutorial-panel.show{ opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0); }
+  .tutorial-icon{
+    width:40px;height:40px;border-radius:12px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:20px;
+    border:2px solid var(--accent); color:var(--accent);
+  }
+  .tutorial-icon.mul{ border-color:var(--accent-mul); color:var(--accent-mul); }
+  .tutorial-text{ flex:1; min-width:0; }
+  .tutorial-title{ font-weight:700; font-size:13.5px; margin-bottom:2px; }
+  .tutorial-desc{ font-size:12px; color:var(--text-dim); line-height:1.4; }
+  #tutorial-next-btn{ flex-shrink:0; padding:9px 16px; font-size:12.5px; }
+  .cell.tutorial-pulse{ animation: tutorialPulse 1.1s ease-in-out infinite; }
+  @keyframes tutorialPulse{
+    0%,100%{ box-shadow: inset 0 0 0 2px rgba(251,191,36,.95), 0 0 14px 2px rgba(251,191,36,.5); }
+    50%{ box-shadow: inset 0 0 0 2px rgba(251,191,36,.95), 0 0 22px 8px rgba(251,191,36,.15); }
+  }
+  #score-target-block.tutorial-pulse-box{
+    border-radius:16px; padding:8px; margin:-8px -8px 4px;
+    animation: tutorialBoxPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes tutorialBoxPulse{
+    0%,100%{ box-shadow: 0 0 0 2px rgba(251,191,36,.95), 0 0 14px 2px rgba(251,191,36,.5); }
+    50%{ box-shadow: 0 0 0 2px rgba(251,191,36,.95), 0 0 22px 8px rgba(251,191,36,.15); }
+  }
+
+  /* ---------- Mobile: keep the FAB stack from covering the board ---------- */
+  @media (max-width: 480px), (max-height: 700px){
+    #board-wrap{ padding-bottom:112px; }
+    #perk-fab{ width:44px; height:44px; font-size:18px; bottom:96px; right:10px; }
+    #settings-fab{ width:44px; height:44px; font-size:18px; bottom:46px; right:10px; }
+    #perk-fab .fab-badge{ width:18px; height:18px; min-width:18px; font-size:10px; }
+  }
 
   /* ---------- Perk list FAB ---------- */
   #perk-fab{
@@ -199,6 +254,8 @@
     cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.35);
   }
   #lang-toggle-row{ display:flex; gap:12px; justify-content:center; margin-bottom:18px; }
+  .settings-section-label{ font-size:11px; color:var(--text-dim); letter-spacing:.05em; text-transform:uppercase; margin:4px 0 8px; text-align:center; }
+  #low-spec-toggle-row{ display:flex; gap:12px; justify-content:center; margin-bottom:6px; }
   .lang-btn{
     padding:10px 22px; border-radius:999px; border:2px solid var(--panel-border);
     background:var(--panel-2); color:var(--text); font-size:13px; cursor:pointer;
@@ -219,21 +276,24 @@
     display:inline-block; margin-left:6px; font-size:11px; color:var(--accent-2);
     font-family:'JetBrains Mono',monospace;
   }
-  #perk-list-close{
+  .close-btn{
     display:block; margin:18px auto 0; padding:9px 24px; border-radius:999px;
     background:var(--panel-2); border:1px solid var(--panel-border); color:var(--text);
-    font-size:13px; cursor:pointer;
+    font-size:13px; cursor:pointer; transition: border-color .15s, color .15s;
   }
+  .close-btn:hover{ border-color:var(--accent-2); color:var(--accent-2); }
 </style>
 </head>
 <body>
 <div id="app">
 
   <div id="hud">
-    <div id="remaining-label">100</div>
-    <div class="bar-track"><div class="bar-fill" id="target-fill" style="width:0%"></div></div>
-    <div class="bar-label">
-      <span id="target-frac-label">0 / 100</span>
+    <div id="score-target-block">
+      <div id="remaining-label">100</div>
+      <div class="bar-track"><div class="bar-fill" id="target-fill" style="width:0%"></div></div>
+      <div class="bar-label">
+        <span id="target-frac-label">0 / 100</span>
+      </div>
     </div>
     <div class="hud-row" style="margin-top:8px;">
       <div class="hud-block">
@@ -262,11 +322,9 @@
   </div>
 
   <div class="overlay show" id="start-overlay">
-    <div id="panel">
+    <div class="panel panel-wide">
       <h1 id="start-title">Number Fusion</h1>
-      <p id="start-instructions">A symbol (+ is a cross, × is a diagonal X) follows your mouse.<br>
-      Click on the cells you want to merge them with that operation.<br>
-      Beat the target score within your limited clicks per stage to clear it! Pick perks to grow stronger.</p>
+      <p id="start-instructions">A symbol (+ is a cross, × is a diagonal X) follows your mouse.<br>Click on the cells you want to merge them with that operation.<br>Beat the target score within your limited clicks per stage to clear it!<br>Pick perks to grow stronger.</p>
       <button class="primary-btn" id="start-btn">START</button>
     </div>
   </div>
@@ -280,7 +338,7 @@
   </div>
 
   <div class="overlay" id="end-overlay">
-    <div id="panel">
+    <div class="panel">
       <div class="hud-label" id="gameover-label">GAME OVER</div>
       <div class="big-score" id="final-score">0</div>
       <div class="sub-line" id="end-sub">Ended at stage 1 · Best 0</div>
@@ -299,7 +357,7 @@
     <div>
       <div class="modal-title" id="perk-list-title">Your Perks</div>
       <div id="perk-list-cards"></div>
-      <button id="perk-list-close">Close</button>
+      <button id="perk-list-close" class="close-btn">Close</button>
     </div>
   </div>
 
@@ -310,8 +368,22 @@
         <button class="lang-btn" id="lang-btn-en" data-lang="en">English</button>
         <button class="lang-btn" id="lang-btn-ko" data-lang="ko">한국어</button>
       </div>
-      <button id="settings-close">Close</button>
+      <div class="settings-section-label" id="low-spec-label">Low-spec Mode</div>
+      <div id="low-spec-toggle-row">
+        <button class="lang-btn" id="low-spec-off-btn">OFF</button>
+        <button class="lang-btn" id="low-spec-on-btn">ON</button>
+      </div>
+      <button id="settings-close" class="close-btn">Close</button>
     </div>
+  </div>
+
+  <div id="tutorial-panel">
+    <div class="tutorial-icon" id="tutorial-icon">+</div>
+    <div class="tutorial-text">
+      <div class="tutorial-title" id="tutorial-title">This is the + symbol</div>
+      <div class="tutorial-desc" id="tutorial-desc">It adds up every highlighted number.</div>
+    </div>
+    <button class="primary-btn" id="tutorial-next-btn">Next</button>
   </div>
 
   <div id="ad-slot">
@@ -344,6 +416,11 @@
   const perkCardsEl = document.getElementById('perk-cards');
   const finalScoreEl = document.getElementById('final-score');
   const endSubEl = document.getElementById('end-sub');
+  const startBtnEl = document.getElementById('start-btn');
+  const retryBtnEl = document.getElementById('retry-btn');
+  const perkOverlaySubEl = document.getElementById('perk-overlay-sub');
+  const perkListCloseEl = document.getElementById('perk-list-close');
+  const settingsCloseEl = document.getElementById('settings-close');
   const perkFabEl = document.getElementById('perk-fab');
   const fabBadgeEl = document.getElementById('fab-badge');
   const perkListOverlay = document.getElementById('perk-list-overlay');
@@ -352,15 +429,100 @@
   const settingsOverlay = document.getElementById('settings-overlay');
   const langBtnEn = document.getElementById('lang-btn-en');
   const langBtnKo = document.getElementById('lang-btn-ko');
+  const lowSpecOffBtn = document.getElementById('low-spec-off-btn');
+  const lowSpecOnBtn = document.getElementById('low-spec-on-btn');
+  const tutorialPanelEl = document.getElementById('tutorial-panel');
+  const tutorialIconEl = document.getElementById('tutorial-icon');
+  const tutorialTitleEl = document.getElementById('tutorial-title');
+  const tutorialDescEl = document.getElementById('tutorial-desc');
+  const tutorialNextBtn = document.getElementById('tutorial-next-btn');
+  const scoreTargetBlockEl = document.getElementById('score-target-block');
+
+  const TUTORIAL_KEY = 'number_fusion_v2_tutorial_seen';
+  let tutorialStepIndex = 0;
+  function getTutorialSteps(){
+    return [
+      { op:'+', anchor:{row:2,col:2}, titleKey:'tutorialPlusTitle', descKey:'tutorialPlusDesc' },
+      { op:'×', anchor:{row:2,col:2}, titleKey:'tutorialMulTitle', descKey:'tutorialMulDesc' },
+      { op:null, icon:'🎯', titleKey:'tutorialGoalTitle', descKey:'tutorialGoalDesc', highlightScore:true },
+    ];
+  }
 
   // ---------- Localization ----------
   const LANG_KEY = 'number_fusion_v2_lang';
-  let lang = localStorage.getItem(LANG_KEY) || 'en';
+  // 저장된 선택이 없으면 시간대/브라우저 언어로 한국 접속 여부를 추정 (네트워크 요청 없음)
+  function detectDefaultLang(){
+    try{
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      if(tz === 'Asia/Seoul') return 'ko';
+      const navLangs = navigator.languages || [navigator.language || ''];
+      if(navLangs.some(l => l.toLowerCase().startsWith('ko'))) return 'ko';
+    } catch(e){ /* Intl/navigator 사용 불가 시 기본값(en)으로 진행 */ }
+    return 'en';
+  }
+  let lang = localStorage.getItem(LANG_KEY) || detectDefaultLang();
+
+  // ---------- Click sound (synthesized, no audio file needed) ----------
+  let audioCtx = null;
+  function getAudioCtx(){
+    if(!audioCtx){
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if(!Ctx) return null;
+      audioCtx = new Ctx();
+    }
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  function playClickSound(){
+    try{
+      const ctx = getAudioCtx();
+      if(!ctx) return;
+      const duration = 0.06;
+      const bufferSize = Math.floor(ctx.sampleRate * duration);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i=0;i<bufferSize;i++){
+        data[i] = (Math.random()*2-1) * Math.pow(1 - i/bufferSize, 2); // 짧게 감쇠하는 노이즈 = 달그락 소리
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const bandpass = ctx.createBiquadFilter();
+      bandpass.type = 'bandpass';
+      bandpass.frequency.value = 2400 + Math.random()*900; // 매번 살짝 다른 톤 (자연스러운 잘그락거림)
+      bandpass.Q.value = 1.1;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.32, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+      noise.connect(bandpass).connect(gain).connect(ctx.destination);
+      noise.start();
+      noise.stop(ctx.currentTime + duration);
+    } catch(e){ /* 오디오 사용 불가 환경은 조용히 무시 */ }
+  }
+
+  // ---------- Low-spec mode ----------
+  const LOW_SPEC_KEY = 'number_fusion_v2_low_spec';
+  let lowSpecMode = localStorage.getItem(LOW_SPEC_KEY) === '1';
+
+  function applyLowSpecMode(){
+    document.body.classList.toggle('low-spec', lowSpecMode);
+    lowSpecOffBtn.classList.toggle('active', !lowSpecMode);
+    lowSpecOnBtn.classList.toggle('active', lowSpecMode);
+  }
+
+  function setLowSpecMode(on){
+    lowSpecMode = on;
+    localStorage.setItem(LOW_SPEC_KEY, on ? '1' : '0');
+    applyLowSpecMode();
+  }
 
   const STRINGS = {
     en: {
       title: 'Number Fusion',
-      instructions: 'A symbol (+ is a cross, × is a diagonal X) follows your mouse.<br>Click on the cells you want to merge them with that operation.<br>Beat the target score within your limited clicks per stage to clear it! Pick perks to grow stronger.',
+      instructions: 'A symbol (+ is a cross, × is a diagonal X) follows your mouse.<br>Click on the cells you want to merge them with that operation.<br>Beat the target score within your limited clicks per stage to clear it!<br>Pick perks to grow stronger.',
       start: 'START',
       stage: 'STAGE',
       total: 'TOTAL',
@@ -377,13 +539,23 @@
       noPerks: 'No perks acquired yet.',
       close: 'Close',
       adSpace: 'Ad Space',
-      comboSuffix: ' Combo+25',
       settingsTitle: 'Settings',
       settingsTitleAttr: 'Settings',
+      lowSpecLabel: 'Low-spec Mode',
+      onLabel: 'ON',
+      offLabel: 'OFF',
+      tutorialNext: 'Next',
+      tutorialFinish: 'Start Stage 1',
+      tutorialPlusTitle: 'This is the + symbol',
+      tutorialPlusDesc: 'It adds up every highlighted number. The cross shape shows which cells get combined.',
+      tutorialMulTitle: 'This is the × symbol',
+      tutorialMulDesc: 'It multiplies every highlighted number instead. The X shape marks the diagonal cells.',
+      tutorialGoalTitle: 'Collect points to clear each stage',
+      tutorialGoalDesc: 'Every merge scores points toward the target shown at the top. Reach it before your clicks run out to clear the stage!',
     },
     ko: {
       title: '넘버 퓨전',
-      instructions: '기호(+ 는 십자가, × 는 대각선 X자)가 마우스를 따라다녀요.<br>원하는 칸 위에서 클릭하면 그 범위의 숫자들이 연산으로 병합돼요.<br>스테이지마다 제한된 클릭 횟수 안에 목표 점수를 넘기면 클리어! 퍽을 골라 더 강해지세요.',
+      instructions: '기호(+ 는 십자가, × 는 대각선 X자)가 마우스를 따라다녀요.<br>원하는 칸 위에서 클릭하면 그 범위의 숫자들이 연산으로 병합돼요.<br>스테이지마다 제한된 클릭 횟수 안에 목표 점수를 넘기면 클리어!<br>퍽을 골라 더 강해지세요.',
       start: '시작하기',
       stage: '스테이지',
       total: '총점',
@@ -400,9 +572,19 @@
       noPerks: '아직 보유한 퍽이 없어요.',
       close: '닫기',
       adSpace: '광고 영역',
-      comboSuffix: ' 콤보+25',
       settingsTitle: '설정',
       settingsTitleAttr: '설정',
+      lowSpecLabel: '저사양 모드',
+      onLabel: '켜기',
+      offLabel: '끄기',
+      tutorialNext: '다음',
+      tutorialFinish: '스테이지 1 시작',
+      tutorialPlusTitle: '이건 + 기호예요',
+      tutorialPlusDesc: '강조된 숫자들을 모두 더해요. 십자가 모양이 어떤 칸들이 합쳐질지 보여줘요.',
+      tutorialMulTitle: '이건 × 기호예요',
+      tutorialMulDesc: '강조된 숫자들을 모두 곱해요. X자 모양이 대각선 칸들을 표시해요.',
+      tutorialGoalTitle: '점수를 모아 스테이지를 클리어하세요',
+      tutorialGoalDesc: '병합할 때마다 위쪽에 뜨는 목표 점수를 향해 점수가 쌓여요. 클릭 수가 다 떨어지기 전에 목표를 넘기면 스테이지 클리어예요!',
     },
   };
 
@@ -429,17 +611,29 @@
       name:{ en:'Extra Merge', ko:'추가 병합' },
       desc:{ en:'+1 click per stage', ko:'스테이지 클릭 수 +1' },
       apply(st){ st.bonusClicks += 1; } },
-    { id:'combo', icon:'⚡',
-      name:{ en:'Combo Mastery', ko:'콤보 마스터리' },
-      desc:{ en:'+25 points for merging within 4s', ko:'4초 내 연속 병합 시 +25점' },
-      apply(st){ st.comboBonusActive = true; } },
     { id:'easier', icon:'🎯',
       name:{ en:'Lighter Target', ko:'가벼운 목표' },
       desc:{ en:'-15% target score from next stage', ko:'다음 스테이지부터 목표 점수 -15%' },
       apply(st){ st.targetScale *= 0.85; } },
     { id:'bigDigits', icon:'🔷',
       name:{ en:'Big Numbers', ko:'큰 숫자 등장' },
-      desc:{ en:'3-4 appear more often', ko:'3~4 숫자가 더 자주 등장' },
+      descFn(st){
+        const range = getValueRange();
+        const max = range[range.length-1];
+        function chanceFor(bigLevel){
+          const weights = range.map(v => v < 0 ? 0.3 : v === 0 ? 0.35 : (v >= max-1 ? 1+bigLevel : 1));
+          const total = weights.reduce((a,b)=>a+b,0);
+          let big = 0;
+          range.forEach((v,i) => { if(v >= max-1) big += weights[i]; });
+          return Math.round((big/total)*100);
+        }
+        const cur = chanceFor(st.bigDigitsLevel);
+        const next = chanceFor(st.bigDigitsLevel+1);
+        return {
+          en: `Top-number odds: ${cur}% → ${next}%`,
+          ko: `큰 숫자 등장 확률: ${cur}% → ${next}%`,
+        };
+      },
       apply(st){ st.bigDigitsLevel += 1; } },
     { id:'headStart', icon:'🚀',
       name:{ en:'Head Start', ko:'헤드 스타트' },
@@ -470,11 +664,9 @@
       stageScore: 0,
       mult: { add:1, mul:1 },
       bonusClicks: 0,
-      comboBonusActive: false,
       targetScale: 1,
       bigDigitsLevel: 0,
       headStartLevel: 0,
-      lastMergeAt: 0,
       cooldownUntil: 0,
       clicksLeft: 0,
       clicksTotal: 0,
@@ -482,11 +674,12 @@
       guaranteedMulBonus: 0,
       opSequence: [],
       opIndex: 0,
+      tutorialActive: false,
       acquiredPerks: {}, // { perkId: count }
     };
   }
 
-  function fmt(n){ return Math.round(n).toLocaleString('ko-KR'); }
+  function fmt(n){ return Math.round(n).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US'); }
   function rand(min,max){ return Math.random()*(max-min)+min; }
   function randInt(min,max){ return Math.floor(rand(min,max+1)); }
 
@@ -575,6 +768,68 @@
     previewCells = targets;
   }
 
+  // ---------- Tutorial ----------
+  function clearTutorialHighlight(step){
+    if(!step || !step.op) return;
+    const cellsToClear = shapeCellsAt(step.anchor.row, step.anchor.col, step.op);
+    for(const c of cellsToClear) c.el.classList.remove('shape-add','shape-mul','tutorial-pulse');
+  }
+
+  function showTutorialStep(i){
+    const steps = getTutorialSteps();
+    clearTutorialHighlight(steps[i-1]);
+    const step = steps[i];
+    if(!step) return;
+
+    if(step.op){
+      const demoCells = shapeCellsAt(step.anchor.row, step.anchor.col, step.op);
+      const cls = step.op === '+' ? 'shape-add' : 'shape-mul';
+      for(const c of demoCells) c.el.classList.add(cls, 'tutorial-pulse');
+      tutorialIconEl.textContent = step.op;
+      tutorialIconEl.classList.toggle('mul', step.op === '×');
+      // 상단 배지도 튜토리얼이 설명하는 기호와 같게 맞춤
+      currentOp = step.op;
+      nextOp = steps[i+1] && steps[i+1].op ? steps[i+1].op : currentOp;
+      renderOperatorBadges();
+    } else {
+      tutorialIconEl.textContent = step.icon;
+      tutorialIconEl.classList.remove('mul');
+    }
+
+    tutorialTitleEl.textContent = t(step.titleKey);
+    tutorialDescEl.textContent = t(step.descKey);
+    tutorialNextBtn.textContent = (i === steps.length - 1) ? t('tutorialFinish') : t('tutorialNext');
+    scoreTargetBlockEl.classList.toggle('tutorial-pulse-box', !!step.highlightScore);
+  }
+
+  function startTutorialStage(){
+    buildBoard();
+    state.tutorialActive = true;
+    tutorialStepIndex = 0;
+    tutorialPanelEl.classList.add('show');
+    showTutorialStep(0);
+  }
+
+  function nextTutorialStep(){
+    const steps = getTutorialSteps();
+    tutorialStepIndex += 1;
+    if(tutorialStepIndex >= steps.length){
+      endTutorial();
+    } else {
+      showTutorialStep(tutorialStepIndex);
+    }
+  }
+
+  function endTutorial(){
+    const steps = getTutorialSteps();
+    clearTutorialHighlight(steps[tutorialStepIndex]);
+    scoreTargetBlockEl.classList.remove('tutorial-pulse-box');
+    tutorialPanelEl.classList.remove('show');
+    state.tutorialActive = false;
+    localStorage.setItem(TUTORIAL_KEY, '1');
+    startStage(); // 튜토리얼이 끝나야 진짜 스테이지 1이 시작됨
+  }
+
   function floatText(xPct, yPct, text){
     const wrap = document.getElementById('board-wrap');
     const rect = boardEl.getBoundingClientRect();
@@ -646,6 +901,8 @@
     const now = performance.now();
     if(now < state.cooldownUntil) return; // 연타 방지 쿨타임
 
+    playClickSound();
+
     const targets = shapeCellsAt(anchorRow, anchorCol, currentOp);
     let gained;
     let exprParts = targets.map(c => c.value);
@@ -664,12 +921,6 @@
       }
     }
 
-    let comboText = '';
-    if(state.comboBonusActive && now - state.lastMergeAt < 4000 && state.lastMergeAt > 0){
-      gained += 25;
-      comboText = t('comboSuffix');
-    }
-    state.lastMergeAt = now;
     state.cooldownUntil = now + COOLDOWN_MS;
     boardEl.classList.add('cooldown');
     setTimeout(() => boardEl.classList.remove('cooldown'), COOLDOWN_MS);
@@ -681,7 +932,7 @@
     const avgRow = targets.reduce((a,c)=>a+c.row,0)/targets.length;
     const avgCol = targets.reduce((a,c)=>a+c.col,0)/targets.length;
     const sign = gained >= 0 ? '+' : '';
-    floatText((avgCol+0.5)/COLS, (avgRow+0.5)/ROWS, `${sign}${fmt(gained)}${comboText}`);
+    floatText((avgCol+0.5)/COLS, (avgRow+0.5)/ROWS, `${sign}${fmt(gained)}`);
 
     for(const c of targets){
       c.el.classList.remove('shape-add','shape-mul');
@@ -752,11 +1003,12 @@
       const def = PERK_POOL.find(p => p.id === id);
       if(!def) continue;
       const count = state.acquiredPerks[id];
+      const descObj = def.descFn ? def.descFn(state) : def.desc;
       const card = document.createElement('div');
       card.className = 'perk-card';
       card.innerHTML = `<div class="perk-icon">${def.icon}</div>
         <div class="perk-name">${def.name[lang]}${count > 1 ? `<span class="perk-count-badge">×${count}</span>` : ''}</div>
-        <div class="perk-desc">${def.desc[lang]}</div>`;
+        <div class="perk-desc">${descObj[lang]}</div>`;
       perkListCardsEl.appendChild(card);
     }
   }
@@ -781,7 +1033,7 @@
     clearPreview();
     document.getElementById('perk-overlay-title').innerHTML =
       `${t('stageWord')} <span id="cleared-stage-num">${state.stage}</span> ${t('clearedWord')}`;
-    document.getElementById('perk-overlay-sub').textContent = t('choosePerk');
+    perkOverlaySubEl.textContent = t('choosePerk');
     perkCardsEl.innerHTML = '';
     const pool = [...PERK_POOL];
     const picks = [];
@@ -792,9 +1044,10 @@
     for(const p of picks){
       const card = document.createElement('div');
       card.className = 'perk-card';
+      const descObj = p.descFn ? p.descFn(state) : p.desc;
       card.innerHTML = `<div class="perk-icon">${p.icon}</div>
         <div class="perk-name">${p.name[lang]}</div>
-        <div class="perk-desc">${p.desc[lang]}</div>`;
+        <div class="perk-desc">${descObj[lang]}</div>`;
       card.addEventListener('click', () => {
         p.apply(state);
         state.acquiredPerks[p.id] = (state.acquiredPerks[p.id] || 0) + 1;
@@ -823,19 +1076,23 @@
     updatePerkFab();
     startOverlay.classList.remove('show');
     endOverlay.classList.remove('show');
-    startStage();
+    if(!localStorage.getItem(TUTORIAL_KEY)){
+      startTutorialStage();
+    } else {
+      startStage();
+    }
   }
 
   // ---------- Input ----------
   boardEl.addEventListener('mousemove', (e) => {
-    if(!running) return;
+    if(!running || state.tutorialActive) return;
     const hit = getCellFromEvent(e);
     if(!hit) return;
     showPreview(hit.row, hit.col);
   });
   boardEl.addEventListener('mouseleave', clearPreview);
   boardEl.addEventListener('click', (e) => {
-    if(!running) return;
+    if(!running || state.tutorialActive) return;
     const hit = getCellFromEvent(e);
     if(!hit) return;
     doMerge(hit.row, hit.col);
@@ -844,21 +1101,24 @@
   function applyStaticText(){
     document.getElementById('start-title').textContent = t('title');
     document.getElementById('start-instructions').innerHTML = t('instructions');
-    document.getElementById('start-btn').textContent = t('start');
+    startBtnEl.textContent = t('start');
     document.getElementById('stage-label-text').textContent = t('stage');
     document.getElementById('total-label-text').textContent = t('total');
     document.getElementById('clicks-label-text').textContent = t('clicks');
     opBadgeNextEl.title = t('nextSymbolTitle');
-    document.getElementById('perk-overlay-sub').textContent = t('choosePerk');
+    perkOverlaySubEl.textContent = t('choosePerk');
     document.getElementById('gameover-label').textContent = t('gameOver');
-    document.getElementById('retry-btn').textContent = t('retry');
+    retryBtnEl.textContent = t('retry');
     perkFabEl.title = t('viewPerksTitle');
     document.getElementById('perk-list-title').textContent = t('yourPerks');
-    document.getElementById('perk-list-close').textContent = t('close');
+    perkListCloseEl.textContent = t('close');
     document.getElementById('ad-slot-text').textContent = t('adSpace');
     document.getElementById('settings-title').textContent = t('settingsTitle');
-    document.getElementById('settings-close').textContent = t('close');
+    settingsCloseEl.textContent = t('close');
     settingsFabEl.title = t('settingsTitleAttr');
+    document.getElementById('low-spec-label').textContent = t('lowSpecLabel');
+    lowSpecOffBtn.textContent = t('offLabel');
+    lowSpecOnBtn.textContent = t('onLabel');
     langBtnEn.classList.toggle('active', lang === 'en');
     langBtnKo.classList.toggle('active', lang === 'ko');
   }
@@ -870,23 +1130,32 @@
     if(state) updateHud();
   }
 
-  document.getElementById('start-btn').addEventListener('click', startRun);
-  document.getElementById('retry-btn').addEventListener('click', startRun);
+  startBtnEl.addEventListener('click', startRun);
+  retryBtnEl.addEventListener('click', startRun);
   perkFabEl.addEventListener('click', () => {
     renderPerkList();
     perkListOverlay.classList.add('show');
   });
-  document.getElementById('perk-list-close').addEventListener('click', () => {
+  perkListCloseEl.addEventListener('click', () => {
     perkListOverlay.classList.remove('show');
   });
   settingsFabEl.addEventListener('click', () => {
     settingsOverlay.classList.add('show');
   });
-  document.getElementById('settings-close').addEventListener('click', () => {
+  settingsCloseEl.addEventListener('click', () => {
     settingsOverlay.classList.remove('show');
   });
   langBtnEn.addEventListener('click', () => setLanguage('en'));
   langBtnKo.addEventListener('click', () => setLanguage('ko'));
+  lowSpecOffBtn.addEventListener('click', () => setLowSpecMode(false));
+  lowSpecOnBtn.addEventListener('click', () => setLowSpecMode(true));
+  tutorialNextBtn.addEventListener('click', nextTutorialStep);
+
+  // 버튼(및 퍽 카드) 클릭마다 자동으로 소리가 나도록 하는 전역 위임 리스너.
+  // 새 버튼이 추가돼도 여기 따로 손댈 필요 없음.
+  document.body.addEventListener('click', (e) => {
+    if(e.target.closest('button, .perk-card')) playClickSound();
+  });
 
   // initial board preview behind start overlay
   state = freshState();
@@ -894,6 +1163,7 @@
   initOperatorQueue();
   updatePerkFab();
   applyStaticText();
+  applyLowSpecMode();
 
 })();
 </script>
