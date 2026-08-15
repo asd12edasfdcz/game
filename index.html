@@ -828,7 +828,6 @@
     '+': [[0,0],[-1,0],[1,0],[0,-1],[0,1]],
     '×': [[0,0],[-1,-1],[-1,1],[1,-1],[1,1]]  // 넘버패드 1,3,5,7,9 자리 (대각선 X자)
   };
-  const RADIUS = 1; // both shapes fit within a 1-cell margin from anchor
 
   // ---------- Perks ----------
   const PERK_POOL = [
@@ -841,7 +840,7 @@
       desc:{ en:'+20% multiplication score', ko:'곱셈 점수 +20%' },
       apply(st){ st.mult.mul *= 1.20; } },
     { id:'extraClicks', icon:'🔁',
-      name:{ en:'Extra Merge', ko:'추가 병합' },
+      name:{ en:'Extra Merge', ko:'추가 클릭' },
       desc:{ en:'+1 click per stage', ko:'스테이지 클릭 수 +1' },
       apply(st){ st.bonusClicks += 1; } },
     { id:'easier', icon:'🎯',
@@ -849,7 +848,7 @@
       desc:{ en:'-20% target score from next stage', ko:'다음 스테이지부터 목표 점수 -20%' },
       apply(st){ st.targetScale *= 0.80; } },
     { id:'headStart', icon:'🚀',
-      name:{ en:'Head Start', ko:'헤드 스타트' },
+      name:{ en:'Head Start', ko:'가벼운 시작' },
       desc:{ en:'Start each stage with 15% of the target score', ko:'스테이지 시작 시 목표 점수의 15%를 보너스로 시작' },
       apply(st){ st.headStartLevel += 1; } },
     { id:'maxValueUp', icon:'📈',
@@ -861,9 +860,13 @@
       desc:{ en:'Guaranteed × per stage +1 (e.g. 1→2)', ko:'스테이지당 확정 × 횟수 +1 (예: 1→2)' },
       apply(st){ st.guaranteedMulBonus += 1; } },
     { id:'addBigBonus', icon:'💥',
-      name:{ en:'Big Sum Bonus', ko:'덧셈 대박' },
-      desc:{ en:'+2 per cell when an addition merge totals over 12', ko:'덧셈 결과가 12를 넘으면 칸당 +2점 추가' },
+      name:{ en:'Big Sum Bonus', ko:'덧셈 효과' },
+      desc:{ en:'+2 per cell when an addition merge totals over 9', ko:'덧셈 결과가 9를 넘으면 칸당 +2점 추가' },
       apply(st){ st.addBigBonusLevel += 1; } },
+    { id:'extraGuaranteedPlus', icon:'🍀',
+      name:{ en:'Addition Insurance', ko:'더 많은 덧셈' },
+      desc:{ en:'Guaranteed + per stage +1', ko:'스테이지당 확정 + 횟수 +1' },
+      apply(st){ st.guaranteedPlusBonus += 1; } },
   ];
 
   // ---------- Game state ----------
@@ -888,6 +891,7 @@
       clicksTotal: 0,
       maxValueBonus: 0,
       guaranteedMulBonus: 0,
+      guaranteedPlusBonus: 0,
       addBigBonusLevel: 0,
       opSequence: [],
       opIndex: 0,
@@ -953,15 +957,15 @@
     }
   }
 
-  function clampAnchor(row, col){
-    row = Math.max(RADIUS, Math.min(ROWS-1-RADIUS, row));
-    col = Math.max(RADIUS, Math.min(COLS-1-RADIUS, col));
-    return { row, col };
-  }
-
   function shapeCellsAt(anchorRow, anchorCol, op){
-    const { row, col } = clampAnchor(anchorRow, anchorCol);
-    return SHAPES[op].map(([dr,dc]) => cells[row+dr][col+dc]);
+    const result = [];
+    for(const [dr,dc] of SHAPES[op]){
+      const r = anchorRow + dr, c = anchorCol + dc;
+      if(r >= 0 && r < ROWS && c >= 0 && c < COLS){
+        result.push(cells[r][c]);
+      }
+    }
+    return result;
   }
 
   function getCellFromEvent(e){
@@ -1114,23 +1118,27 @@
     return 1 + state.guaranteedMulBonus;
   }
 
+  function guaranteedPlusForStage(){
+    return state.guaranteedPlusBonus; // 아이템 없으면 확정 없음 (기본 랜덤에서도 +가 더 자주 나옴)
+  }
+
   // 스테이지에 쓸 연산자 시퀀스를 미리 만들어서 × 최소 등장 횟수를 보장함.
-  function buildOpSequence(length, guaranteedMul){
-    const seq = [];
-    for(let i=0;i<length;i++) seq.push(randomOp());
-    const mulCount = seq.filter(o => o === '×').length;
-    if(mulCount < guaranteedMul){
-      const needed = guaranteedMul - mulCount;
-      const plusIndices = [];
-      for(let i=0;i<seq.length;i++) if(seq[i] !== '×') plusIndices.push(i);
-      for(let i=plusIndices.length-1;i>0;i--){
-        const j = randInt(0,i);
-        [plusIndices[i],plusIndices[j]] = [plusIndices[j],plusIndices[i]];
-      }
-      for(let k=0;k<needed && k<plusIndices.length;k++){
-        seq[plusIndices[k]] = '×';
-      }
+  // 스테이지에 쓸 연산자 시퀀스를 미리 만들어서 +/× 최소 등장 횟수를 보장함.
+  // × 확정 개수를 먼저 배치하고, 그다음 + 확정 개수를 배치, 나머지는 랜덤.
+  // 둘이 합쳐 클릭 수를 넘으면 자동으로 줄여서 충돌 없이 처리함.
+  function buildOpSequence(length, guaranteedMul, guaranteedPlus){
+    const idxs = [...Array(length).keys()];
+    for(let i=idxs.length-1;i>0;i--){
+      const j = randInt(0,i);
+      [idxs[i],idxs[j]] = [idxs[j],idxs[i]];
     }
+    const seq = new Array(length);
+    const mulTarget = Math.min(guaranteedMul, length);
+    const plusTarget = Math.min(guaranteedPlus, length - mulTarget);
+    let p = 0;
+    for(let i=0;i<mulTarget;i++) seq[idxs[p++]] = '×';
+    for(let i=0;i<plusTarget;i++) seq[idxs[p++]] = '+';
+    for(; p<length; p++) seq[idxs[p]] = randomOp();
     return seq;
   }
 
@@ -1142,7 +1150,7 @@
   }
 
   function initOperatorQueue(){
-    state.opSequence = buildOpSequence(Math.max(state.clicksTotal, 1), guaranteedMulForStage());
+    state.opSequence = buildOpSequence(Math.max(state.clicksTotal, 1), guaranteedMulForStage(), guaranteedPlusForStage());
     state.opIndex = 0;
     currentOp = state.opSequence[0] ?? randomOp();
     nextOp = state.opSequence[1] ?? randomOp();
@@ -1172,7 +1180,7 @@
     if(currentOp === '+'){
       const sum = exprParts.reduce((a,b)=>a+b,0);
       gained = Math.round(sum * state.mult.add);
-      if(sum > 12 && state.addBigBonusLevel > 0){
+      if(sum > 9 && state.addBigBonusLevel > 0){
         gained += 2 * targets.length * state.addBigBonusLevel;
       }
     } else {
